@@ -1,0 +1,51 @@
+/* Services.css */
+.services {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+  }
+  
+  .header {
+    background-color: #333;
+    color: white;
+    padding: 10px;
+  }
+  
+  .header .logo h1 {
+    display: inline;
+  }
+  
+  .nav-links {
+    list-style-type: none;
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .nav-links li {
+    margin: 0 10px;
+  }
+  
+  .nav-links li a {
+    color: white;
+    text-decoration: none;
+  }
+  
+  .footer {
+    background-color: #333;
+    color: white;
+    padding: 20px;
+  }
+  
+  .footer-content {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .footer-logo, .footer-links, .footer-contact {
+    width: 30%;
+  }
+  
+  .footer-bottom {
+    text-align: center;
+    margin-top: 20px;
+  }
+  
