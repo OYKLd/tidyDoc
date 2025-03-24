@@ -362,3 +362,16 @@
       font-size: 2rem;
     }
   }
+  .logout-button {
+    background-color: transparent;
+    border: 1px solid #ff4d4d;
+    color: #ff4d4d;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .logout-button:hover {
+    background-color: #ff4d4d;
+    color: white;
+  }
