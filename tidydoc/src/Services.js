@@ -33,6 +33,12 @@ const DocumentManagementApp = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [dbInitialized, setDbInitialized] = useState(false);
   const fileInputRef = useRef(null);
+  
+  // États pour la caméra
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // IndexedDB setup
   useEffect(() => {
@@ -49,7 +55,13 @@ const DocumentManagementApp = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      // Cleanup de l'effet et arrêt de la caméra si elle est active
+      unsubscribe();
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, []);
 
   // Initialisation de la base de données pour l'utilisateur
@@ -330,6 +342,77 @@ const DocumentManagementApp = () => {
     }
   };
 
+  // Fonctions pour la caméra
+  const startCamera = async () => {
+    try {
+      // Fermer d'abord toute session de caméra existante
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+      
+      // Accéder à la caméra
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment" }, // caméra arrière par défaut
+        audio: false 
+      });
+      
+      // Stocker le stream et activer l'affichage de la caméra
+      setCameraStream(stream);
+      setShowCamera(true);
+      setShowOptions(false); // Fermer le menu flottant
+      
+      // Une fois l'état mis à jour et le composant rendu
+      // connecter le stream à l'élément vidéo
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+      
+    } catch (error) {
+      console.error("Erreur d'accès à la caméra:", error);
+      alert("Impossible d'accéder à la caméra. Veuillez vérifier les permissions.");
+    }
+  };
+
+  // Fonction pour capturer l'image
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    // Définir les dimensions du canvas pour correspondre à la vidéo
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Dessiner l'image sur le canvas
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convertir le canvas en blob
+    canvas.toBlob(async (blob) => {
+      // Créer un fichier à partir du blob
+      const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // Traiter l'image comme si elle venait d'un input file
+      const event = { target: { files: [file] } };
+      await handleDocumentCapture(event);
+      
+      // Fermer la caméra
+      closeCamera();
+    }, 'image/jpeg', 0.95); // qualité 95%
+  };
+
+  // Fonction pour fermer la caméra
+  const closeCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setShowCamera(false);
+  };
+
   // Fonction pour visualiser un document
   const viewDocument = (doc) => {
     setViewingDocument(doc);
@@ -581,7 +664,7 @@ const DocumentManagementApp = () => {
             ))}
           </div>
 
-          {/* Document Viewer Modal - NOUVELLE VERSION AMÉLIORÉE */}
+          {/* Document Viewer Modal */}
           {viewingDocument && (
             <div className="document-viewer-modal" onClick={closeViewer}>
               <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -657,6 +740,30 @@ const DocumentManagementApp = () => {
                     className="action-button delete"
                   >
                     <Trash size={16} /> Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal de caméra */}
+          {showCamera && (
+            <div className="camera-modal">
+              <div className="camera-container">
+                <video 
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  style={{ width: '100%', maxHeight: '80vh' }}
+                />
+                <canvas ref={canvasRef} style={{ display: 'none' }} />
+                
+                <div className="camera-controls">
+                  <button onClick={capturePhoto} className="capture-button">
+                    <span className="capture-icon"></span>
+                  </button>
+                  <button onClick={closeCamera} className="close-camera-button">
+                    Annuler
                   </button>
                 </div>
               </div>
@@ -755,23 +862,16 @@ const DocumentManagementApp = () => {
             </button>
             
             {showOptions && (
-              <div className="fab-options">
-                <button 
-                  onClick={() => fileInputRef.current.click()}
-                  className="fab-option"
-                  disabled={isProcessing}
-                >
-                  <Camera size={24} /> Capture
-                </button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                  accept="image/*,application/pdf"
-                  onChange={handleDocumentCapture}  
-                />
-              </div>
-            )}
+  <div className="fab-options">
+    <button 
+      onClick={startCamera}
+      className="fab-option"
+      disabled={isProcessing}
+    >
+      <Camera size={24} /> Prendre une photo
+    </button>
+  </div>
+)}
           </div>
         </>
       ) : (
